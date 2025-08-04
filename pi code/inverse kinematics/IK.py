@@ -70,7 +70,7 @@ def inverse_kinematics(target_x, target_y, target_z, theta1_initial, theta2_init
     # Base rotation
     phi = np.arctan2(target_y, target_x)
 
-    # Joints A & B
+    # Joints A, B, C
     for i in range(max_iters):
         current_position = forward_kinematics(theta1, theta2, theta3, L1, L2, L3)
         error = np.array([target_r, target_z]) - current_position
