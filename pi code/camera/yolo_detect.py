@@ -11,13 +11,8 @@ from ultralytics import YOLO
 # Define and parse user input arguments
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--model', help='Path to YOLO model file (example: "runs/detect/train/weights/best.pt")',
-                    required=True)
-parser.add_argument('--source', help='Image source, can be image file ("test.jpg"), \
-                    image folder ("test_dir"), video file ("testvid.mp4"), index of USB camera ("usb0"), or index of Picamera ("picamera0")', 
-                    required=True)
-parser.add_argument('--thresh', help='Minimum confidence threshold for displaying detected objects (example: "0.4")',
-                    default=0.5)
+
+
 parser.add_argument('--resolution', help='Resolution in WxH to display inference results at (example: "640x480"), \
                     otherwise, match source resolution',
                     default=None)
@@ -28,9 +23,9 @@ args = parser.parse_args()
 
 
 # Parse user inputs
-model_path = args.model
-img_source = args.source
-min_thresh = args.thresh
+model_path = "D:/yolo/runs/detect/train/weights/best.pt"
+# min confidence for displaying detected objects
+min_thresh = 0.5
 user_res = args.resolution
 record = args.record
 
@@ -43,77 +38,24 @@ if (not os.path.exists(model_path)):
 model = YOLO(model_path, task='detect')
 labels = model.names
 
-# Parse input to determine if image source is a file, folder, video, or USB camera
-img_ext_list = ['.jpg','.JPG','.jpeg','.JPEG','.png','.PNG','.bmp','.BMP']
-vid_ext_list = ['.avi','.mov','.mp4','.mkv','.wmv']
-
-if os.path.isdir(img_source):
-    source_type = 'folder'
-elif os.path.isfile(img_source):
-    _, ext = os.path.splitext(img_source)
-    if ext in img_ext_list:
-        source_type = 'image'
-    elif ext in vid_ext_list:
-        source_type = 'video'
-    else:
-        print(f'File extension {ext} is not supported.')
-        sys.exit(0)
-elif 'usb' in img_source:
-    source_type = 'usb'
-    usb_idx = int(img_source[3:])
-elif 'picamera' in img_source:
-    source_type = 'picamera'
-    picam_idx = int(img_source[8:])
-else:
-    print(f'Input {img_source} is invalid. Please try again.')
-    sys.exit(0)
-
 # Parse user-specified display resolution
 resize = False
 if user_res:
     resize = True
     resW, resH = int(user_res.split('x')[0]), int(user_res.split('x')[1])
 
-# Check if recording is valid and set up recording
-if record:
-    if source_type not in ['video','usb']:
-        print('Recording only works for video and camera sources. Please try again.')
-        sys.exit(0)
-    if not user_res:
-        print('Please specify resolution to record video at.')
-        sys.exit(0)
-    
     # Set up recording
     record_name = 'demo1.avi'
     record_fps = 30
     recorder = cv2.VideoWriter(record_name, cv2.VideoWriter_fourcc(*'MJPG'), record_fps, (resW,resH))
 
-# Load or initialize image source
-if source_type == 'image':
-    imgs_list = [img_source]
-elif source_type == 'folder':
-    imgs_list = []
-    filelist = glob.glob(img_source + '/*')
-    for file in filelist:
-        _, file_ext = os.path.splitext(file)
-        if file_ext in img_ext_list:
-            imgs_list.append(file)
-elif source_type == 'video' or source_type == 'usb':
+# Load video
+cap = cv2.VideoCapture(0)
 
-    if source_type == 'video': cap_arg = img_source
-    elif source_type == 'usb': cap_arg = usb_idx
-    cap = cv2.VideoCapture(cap_arg)
-
-    # Set camera or video resolution if specified by user
-    if user_res:
-        ret = cap.set(3, resW)
-        ret = cap.set(4, resH)
-
-elif source_type == 'picamera':
-    from picamera2 import Picamera2
-    cap = Picamera2()
-    cap.configure(cap.create_video_configuration(main={"format": 'RGB888', "size": (resW, resH)}))
-    cap.start()
+# Set camera or video resolution if specified by user
+if user_res:
+    ret = cap.set(3, resW)
+    ret = cap.set(4, resH)
 
 # Set bounding box colors (using the Tableu 10 color scheme)
 bbox_colors = [(164,120,87), (68,148,228), (93,97,209), (178,182,133), (88,159,106), 
@@ -130,32 +72,11 @@ while True:
 
     t_start = time.perf_counter()
 
-    # Load frame from image source
-    if source_type == 'image' or source_type == 'folder': # If source is image or image folder, load the image using its filename
-        if img_count >= len(imgs_list):
-            print('All images have been processed. Exiting program.')
-            sys.exit(0)
-        img_filename = imgs_list[img_count]
-        frame = cv2.imread(img_filename)
-        img_count = img_count + 1
-    
-    elif source_type == 'video': # If source is a video, load next frame from video file
-        ret, frame = cap.read()
-        if not ret:
-            print('Reached end of the video file. Exiting program.')
-            break
-    
-    elif source_type == 'usb': # If source is a USB camera, grab frame from camera
-        ret, frame = cap.read()
-        if (frame is None) or (not ret):
-            print('Unable to read frames from the camera. This indicates the camera is disconnected or not working. Exiting program.')
-            break
 
-    elif source_type == 'picamera': # If source is a Picamera, grab frames using picamera interface
-        frame = cap.capture_array()
-        if (frame is None):
-            print('Unable to read frames from the Picamera. This indicates the camera is disconnected or not working. Exiting program.')
-            break
+    ret, frame = cap.read()
+    if (frame is None) or (not ret):
+        print('Unable to read frames from the camera. This indicates the camera is disconnected or not working. Exiting program.')
+        break
 
     # Resize frame to desired display resolution
     if resize == True:
@@ -201,20 +122,16 @@ while True:
             # Basic example: count the number of objects in the image
             object_count = object_count + 1
 
-    # Calculate and draw framerate (if using video, USB, or Picamera source)
-    if source_type == 'video' or source_type == 'usb' or source_type == 'picamera':
-        cv2.putText(frame, f'FPS: {avg_frame_rate:0.2f}', (10,20), cv2.FONT_HERSHEY_SIMPLEX, .7, (0,255,255), 2) # Draw framerate
+    # Calculate and draw framerate
+    cv2.putText(frame, f'FPS: {avg_frame_rate:0.2f}', (10,20), cv2.FONT_HERSHEY_SIMPLEX, .7, (0,255,255), 2) # Draw framerate
     
     # Display detection results
     cv2.putText(frame, f'Number of objects: {object_count}', (10,40), cv2.FONT_HERSHEY_SIMPLEX, .7, (0,255,255), 2) # Draw total number of detected objects
     cv2.imshow('YOLO detection results',frame) # Display image
     if record: recorder.write(frame)
 
-    # If inferencing on individual images, wait for user keypress before moving to next image. Otherwise, wait 5ms before moving to next frame.
-    if source_type == 'image' or source_type == 'folder':
-        key = cv2.waitKey()
-    elif source_type == 'video' or source_type == 'usb' or source_type == 'picamera':
-        key = cv2.waitKey(5)
+    # Wait 5ms before moving to next frame.
+    key = cv2.waitKey(5)
     
     if key == ord('q') or key == ord('Q'): # Press 'q' to quit
         break
@@ -240,9 +157,6 @@ while True:
 
 # Clean up
 print(f'Average pipeline FPS: {avg_frame_rate:.2f}')
-if source_type == 'video' or source_type == 'usb':
-    cap.release()
-elif source_type == 'picamera':
-    cap.stop()
-if record: recorder.release()
+
+cap.release()
 cv2.destroyAllWindows()
