@@ -21,28 +21,28 @@ def forward_kinematics(theta1, theta2, theta3, L1, L2, L3):
 
     # End effector position in terms of joint angles
 
-    # A is the joint A angle from the horizontal
     # B is the joint B angle from the horizontal
     # C is the joint C angle from the horizontal
-    A = theta1
-    B = A + theta2 - np.pi
-    C = B + theta3 - np.pi
+    # D is the joint D angle from the horizontal
+    B = theta1
+    C = B + theta2 - np.pi
+    D = C + theta3 - np.pi
 
-    r = (L1 * np.cos(A)) + (L2 * np.cos(B)) + (L3 * np.cos(C))
-    z = (L1 * np.sin(A)) + (L2 * np.sin(B)) + (L3 * np.sin(C))
+    r = (L1 * np.cos(B)) + (L2 * np.cos(C)) + (L3 * np.cos(D))
+    z = (L1 * np.sin(B)) + (L2 * np.sin(C)) + (L3 * np.sin(D))
     return np.array([r, z])
 
 
 def jacobian(theta1, theta2, theta3, L1, L2, L3):
 
-    A = theta1
-    B = A + theta2 - np.pi
-    C = B + theta3 - np.pi
+    B = theta1
+    C = B + theta2 - np.pi
+    D = C + theta3 - np.pi
 
     # Differentiate forward kinematics position function wrt theta to find jacobian matrix
     J = np.array([
-        [- (L1 * np.sin(A)) - (L2 * np.sin(B)) - (L3 * np.sin(C)), - (L2 * np.sin(B)) - (L3 * np.sin(C)), - (L3 * np.sin(C))], #dr/d(theta1), dr/d(theta2), dr/d(theta3)
-        [(L1 * np.cos(A)) + (L2 * np.cos(B)) + (L3 * np.cos(C)), (L2 * np.cos(B)) + (L3 * np.cos(C)), (L3 * np.cos(C))] #dz/d(theta1), dz/d(theta2), dz/d(theta3)
+        [- (L1 * np.sin(B)) - (L2 * np.sin(C)) - (L3 * np.sin(D)), - (L2 * np.sin(C)) - (L3 * np.sin(D)), - (L3 * np.sin(D))], #dr/d(theta1), dr/d(theta2), dr/d(theta3)
+        [(L1 * np.cos(B)) + (L2 * np.cos(C)) + (L3 * np.cos(D)), (L2 * np.cos(C)) + (L3 * np.cos(D)), (L3 * np.cos(D))] #dz/d(theta1), dz/d(theta2), dz/d(theta3)
     ])
     return J
 
@@ -70,7 +70,7 @@ def inverse_kinematics(target_x, target_y, target_z, theta1_initial, theta2_init
     # Base rotation
     phi = np.arctan2(target_y, target_x)
 
-    # Joints A, B, C
+    # Joints B, C, D
     for i in range(max_iters):
         current_position = forward_kinematics(theta1, theta2, theta3, L1, L2, L3)
         error = np.array([target_r, target_z]) - current_position
@@ -109,6 +109,6 @@ target_z = int(input("Input target z-coord: "))
 angles = inverse_kinematics(target_x, target_y, target_z, theta1_initial, theta2_initial, theta3_initial, L1, L2, L3)
 
 print(f"Base rotation angle (phi): {np.degrees(angles[0]):.2f} degrees")
-print(f"Joint A angle (theta1): {np.degrees(angles[1]):.2f} degrees")
-print(f"Joint B angle (theta2): {np.degrees(angles[2]):.2f} degrees")
-print(f"Joint C angle (theta3): {np.degrees(angles[3]):.2f} degrees")
+print(f"Joint B angle (theta1): {np.degrees(angles[1]):.2f} degrees")
+print(f"Joint C angle (theta2): {np.degrees(angles[2]):.2f} degrees")
+print(f"Joint D angle (theta3): {np.degrees(angles[3]):.2f} degrees")
