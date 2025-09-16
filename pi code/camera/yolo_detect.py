@@ -16,7 +16,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--resolution', help='Resolution in WxH to display inference results at (example: "640x480"), \
                     otherwise, match source resolution',
                     default=None)
-parser.add_argument('--thresh', help='Minimum confidence threshold for displaying detected objects (example: "0.4")',
+parser.add_argument('--thresh', help='Minimum confidence threshold for displaying detected cards (example: "0.4")',
                     default=0.5)
 parser.add_argument('--record', help='Record results from video or webcam and save it as "demo1.avi". Must specify --resolution argument to record.',
                     action='store_true')
@@ -89,7 +89,7 @@ while True:
     # extract results
     detections = results[0].boxes
 
-    object_count = 0
+    card_count = 0
 
     # go through each detection and get bbox coords, confidence and class
     for i in range(len(detections)):
@@ -106,6 +106,7 @@ while True:
         # get bounding box confidence
         conf = detections[i].conf.item()
 
+        centre = (int((xmax + xmin) / 2), int((ymax + ymin) / 2))
 
         if conf > min_thresh:
 
@@ -118,14 +119,17 @@ while True:
             cv2.rectangle(frame, (xmin, label_ymin-labelSize[1]-10), (xmin+labelSize[0], label_ymin+baseLine-10), colour, cv2.FILLED) # draw white box to put label text in
             cv2.putText(frame, label, (xmin, label_ymin-7), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1) # draw label text
 
+            radius = max(5, int(min(xmax - xmin, ymax - ymin) / 4))
+            cv2.circle(frame, centre, radius, colour, -1)
 
-            object_count = object_count + 1
+
+            card_count = card_count + 1
 
     # calculate and draw framerate
     cv2.putText(frame, f'FPS: {avg_frame_rate:0.2f}', (10,20), cv2.FONT_HERSHEY_SIMPLEX, .7, (0,255,255), 2) # Draw framerate
     
     # display detection results
-    cv2.putText(frame, f'Number of objects: {object_count}', (10,40), cv2.FONT_HERSHEY_SIMPLEX, .7, (0,255,255), 2) # Draw total number of detected objects
+    cv2.putText(frame, f'Number of cards: {card_count}', (10,40), cv2.FONT_HERSHEY_SIMPLEX, .7, (0,255,255), 2) # Draw total number of detected cards
     cv2.imshow('YOLO detection results',frame) # Display image
     if record: recorder.write(frame)
 
