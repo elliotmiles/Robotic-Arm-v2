@@ -4,7 +4,7 @@ import argparse
 import glob
 import time
 
-import cv2
+import cv2 as cv
 import numpy as np
 from ultralytics import YOLO
 
@@ -30,6 +30,8 @@ min_thresh = float(args.thresh)
 user_res = args.resolution
 record = args.record
 
+
+
 # check if model file exists and is valid
 if (not os.path.exists(model_path)):
     print('ERROR: Model path is invalid or model was not found. Make sure the model filename was entered correctly.')
@@ -49,9 +51,9 @@ if user_res:
 if record:
     record_name = 'demo1.avi'
     record_fps = 30
-    recorder = cv2.VideoWriter(record_name, cv2.VideoWriter_fourcc(*'MJPG'), record_fps, (resW,resH))
+    recorder = cv.VideoWriter(record_name, cv.VideoWriter_fourcc(*'MJPG'), record_fps, (resW,resH))
 
-cap = cv2.VideoCapture(0)
+cap = cv.VideoCapture(0)
 
 # set camera or video resolution if specified by user
 if user_res:
@@ -81,7 +83,7 @@ while True:
 
     # resize frame
     if resize == True:
-        frame = cv2.resize(frame,(resW,resH))
+        frame = cv.resize(frame,(resW,resH))
 
     # run inference on frame
     results = model(frame, verbose=False)
@@ -111,37 +113,39 @@ while True:
         if conf > min_thresh:
 
             colour = bbox_colours[classidx % 10]
-            cv2.rectangle(frame, (xmin,ymin), (xmax,ymax), colour, 2)
+            cv.rectangle(frame, (xmin,ymin), (xmax,ymax), colour, 2)
 
             label = f'{classname}: {int(conf*100)}%'
-            labelSize, baseLine = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1) # get font size
+            labelSize, baseLine = cv.getTextSize(label, cv.FONT_HERSHEY_SIMPLEX, 0.5, 1) # get font size
             label_ymin = max(ymin, labelSize[1] + 10) # buffer
-            cv2.rectangle(frame, (xmin, label_ymin-labelSize[1]-10), (xmin+labelSize[0], label_ymin+baseLine-10), colour, cv2.FILLED) # draw white box to put label text in
-            cv2.putText(frame, label, (xmin, label_ymin-7), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1) # draw label text
+            cv.rectangle(frame, (xmin, label_ymin-labelSize[1]-10), (xmin+labelSize[0], label_ymin+baseLine-10), colour, cv.FILLED) # draw white box to put label text in
+            cv.putText(frame, label, (xmin, label_ymin-7), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1) # draw label text
 
             radius = max(5, int(min(xmax - xmin, ymax - ymin) / 4))
-            cv2.circle(frame, centre, radius, colour, -1)
+            cv.circle(frame, centre, radius, colour, -1)
 
 
             card_count = card_count + 1
 
+
     # calculate and draw framerate
-    cv2.putText(frame, f'FPS: {avg_frame_rate:0.2f}', (10,20), cv2.FONT_HERSHEY_SIMPLEX, .7, (0,255,255), 2) # Draw framerate
+    cv.putText(frame, f'FPS: {avg_frame_rate:0.2f}', (10,20), cv.FONT_HERSHEY_SIMPLEX, .7, (0,255,255), 2) # draw framerate
+    cv.putText(frame, f'Resolution: {resW}x{resH}', (10,40), cv.FONT_HERSHEY_SIMPLEX, .7, (0,255,255), 2) # draw resolution
     
     # display detection results
-    cv2.putText(frame, f'Number of cards: {card_count}', (10,40), cv2.FONT_HERSHEY_SIMPLEX, .7, (0,255,255), 2) # Draw total number of detected cards
-    cv2.imshow('YOLO detection results',frame) # Display image
+    cv.putText(frame, f'Number of cards: {card_count}', (10,60), cv.FONT_HERSHEY_SIMPLEX, .7, (0,255,255), 2) # draw total number of detected cards
+    cv.imshow('YOLO detection results',frame) # display image
     if record: recorder.write(frame)
 
     # wwit 5ms 
-    key = cv2.waitKey(5)
+    key = cv.waitKey(5)
     
     if key == ord('q') or key == ord('Q'): 
         break
     elif key == ord('s') or key == ord('S'): # press 's' to pause inference
-        cv2.waitKey()
+        cv.waitKey()
     elif key == ord('p') or key == ord('P'): # press 'p' to save a picture of results on this frame
-        cv2.imwrite('capture.png',frame)
+        cv.imwrite('capture.png',frame)
     
     # calculate fps for this frame
     t_stop = time.perf_counter()
@@ -161,4 +165,4 @@ while True:
 print(f'Average pipeline FPS: {avg_frame_rate:.2f}')
 
 cap.release()
-cv2.destroyAllWindows()
+cv.destroyAllWindows()
