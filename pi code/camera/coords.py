@@ -171,11 +171,55 @@ while True:
         if 13 in marker_centres and 49 in marker_centres:
             # draw line connecting centres of 13 and 49
             cv.line(frame, marker_centres[13], marker_centres[49], (255, 255, 0), 3)
+
+            # midpoint of markers is the centre of the base
             midpoint = ((marker_centres[13][0] + marker_centres[49][0]) // 2, (marker_centres[13][1] + marker_centres[49][1]) // 2)
+
+            dy = marker_centres[13][1] - marker_centres[49][1]
+            dx = marker_centres[13][0] - marker_centres[49][0]
+
+            # the difference in rotation between the camera and the base
+            theta = -(np.arctan2(dy, dx) + np.pi)
+
+
+            if theta != 0:
+                transform = np.array([
+                    [np.cos(theta), -np.sin(theta)], 
+                    [np.sin(theta), np.cos(theta)]
+                ])
+
+            else:
+                transform = np.array([
+                    [1, 0], # THE IDENTITY MATRIX!!!!
+                    [0, 1]
+                ])    
+
+            
+
             for card in card_centres:
                 cv.line(frame, midpoint, card_centres[card], (0, 0, 255), 3)
 
+                # difference between position of card and position of base
+                diff_coords = np.array([
+                    card_centres[card][0] - midpoint[0],
+                    card_centres[card][1] - midpoint[1]
+                ])
+                
+                # with the base set as the "origin", rotate the card by theta
+                rotated = np.dot(transform, diff_coords)
 
+                # 540mm = 720 pixels
+                
+                # coords of the card in the coordinate frame of the base
+                robot_coords = (round(float(rotated[0]) * (540/720), 2), round(-float(rotated[1]) * (540/720), 2))
+
+
+                print(f"{card} relative coords: {robot_coords}")
+
+                # creates a point to show the rotation
+                rotation_point = (int(rotated[0] + midpoint[0]), int(rotated[1] + midpoint[1]))
+                cv.circle(frame, rotation_point, 5, (0, 255, 0), -1)
+                            
 
     # calculate and draw framerate
     cv.putText(frame, f'FPS: {avg_frame_rate:0.2f}', (10,20), cv.FONT_HERSHEY_SIMPLEX, .7, (0,255,255), 2) # draw framerate
