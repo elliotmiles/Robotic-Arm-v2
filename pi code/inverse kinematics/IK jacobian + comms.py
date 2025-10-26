@@ -130,7 +130,8 @@ print(f"Joint D angle (theta3): {angles[3]:.2f} degrees")
 
 
 
-comm = ",".join(map(str, angles))
+angles_deg = [positive_deg(a) for a in angles]
+comm = ",".join(map(str, angles_deg))
 
 ser.write(f"{comm}\n".encode())
 
