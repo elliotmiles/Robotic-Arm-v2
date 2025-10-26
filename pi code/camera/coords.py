@@ -44,6 +44,8 @@ def setup_recording(record, resW, resH):
 
 # moving average of detections over frames
 def ema(prev, new, alpha):
+    if new is None:
+        return prev
     if prev is None:
         return new
     x = alpha * new[0] + (1 - alpha) * prev[0]
@@ -76,7 +78,7 @@ def inference_loop(cap, model, labels, resize, resW, resH, record, recorder, det
 
         card_count = 0
 
-
+        current_frame_cards = {}
 
         # go through each detection and get bbox coords, confidence and class
         for i in range(len(detections)):
@@ -110,10 +112,13 @@ def inference_loop(cap, model, labels, resize, resW, resH, record, recorder, det
                 cv.circle(frame, centre, radius, colour, -1)
 
                 smoothed_cards[classname] = ema(smoothed_cards[classname], centre, alpha)
-                card_centres[classname] = smoothed_cards[classname]
+                current_frame_cards[classname] = smoothed_cards[classname]
 
                 #card_centres[classname] = centre
                 card_count = card_count + 1
+
+        card_centres.clear()
+        card_centres.update(current_frame_cards)
 
         # ARUCO MARKERS:
         grey = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
