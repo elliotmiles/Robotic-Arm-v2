@@ -1,0 +1,4 @@
+Python:
+numpy
+cv2
+ultralytics
